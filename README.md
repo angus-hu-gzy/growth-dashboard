@@ -39,6 +39,10 @@
 
 > 注意：自动备份依赖浏览器能力，Firefox/Safari 不支持时请定期手动「导出 JSON」。
 
+## 🚀 推送到 GitHub
+
+第一次推送、认证（PAT）、日常 git 三板斧，见 **[GITHUB_GUIDE.md](GITHUB_GUIDE.md)**。
+
 ## 💾 数据说明
 
 - 所有数据保存在**当前浏览器的 localStorage**，不联网、不上传服务器
