@@ -527,72 +527,33 @@ function todayStr(){return fmt(new Date());}
 
 function seed(){
   return {
-    settings:{targetGpa:3.5,ownerName:'Angus',major:'医学信息工程'},
-    courses:[
-      {name:'高等数学',credit:4,score:85,term:'2026秋'},
-      {name:'线性代数',credit:3,score:90,term:'2026秋'},
-      {name:'C语言程序设计',credit:3,score:82,term:'2026秋'},
-      {name:'Python程序设计',credit:2,score:88,term:'2027春'}
-    ],
-    codingLogs:[
-      {date:'2026-08-15',min:90,topic:'Python 基础语法',tags:['Python','基础']},
-      {date:'2026-08-16',min:120,topic:'分支与循环',tags:['Python']},
-      {date:'2026-08-17',min:60,topic:'函数',tags:['Python']},
-      {date:'2026-08-18',min:80,topic:'C 入门',tags:['C']},
-      {date:'2026-08-19',min:100,topic:'列表与字典',tags:['Python']},
-      {date:'2026-08-20',min:70,topic:'调试练习',tags:['Python']}
-    ],
-    skills:[
-      {name:'Python',lv:35},{name:'C',lv:20},{name:'机器学习',lv:10},{name:'前端',lv:15}
-    ],
-    projects:[
-      {name:'个人成长仪表盘',desc:'纯前端单文件，记录学习轨迹',prog:60,tags:['前端','工具'],status:'进行中'},
-      {name:'肺结节识别 demo',desc:'U-Net 入门，台式机训练',prog:0,tags:['AI','医学影像'],status:'规划中'}
-    ],
-    timeline:[
-      {title:'蓝桥杯报名',type:'竞赛',start:'2026-09-01',end:'2026-12-01',status:'规划中'},
-      {title:'英语四级',type:'考证',start:'2026-12-01',end:'2026-12-15',status:'规划中'},
-      {title:'寒假医疗AI实习',type:'实习',start:'2027-01-15',end:'2027-02-28',status:'规划中'}
-    ],
-    goals:[
-      {title:'大一上：编程双修 + 数学稳住',krs:[
-        {text:'Python 入门到能写小工具',done:true},
-        {text:'C 语言课内跟住',done:false},
-        {text:'高数期末 85+',done:false}
-      ]}
-    ],
-    habits:[
-      {name:'每天 coding 1h',records:{'2026-08-15':true,'2026-08-16':true,'2026-08-17':true,'2026-08-18':true,'2026-08-19':true,'2026-08-20':true}},
-      {name:'每天英语 30min',records:{'2026-08-15':true,'2026-08-16':false,'2026-08-17':true,'2026-08-18':true,'2026-08-19':false,'2026-08-20':true}}
-    ],
-    plans:{
-      '2026-08-20':[
-        {text:'Python 刷题 2h',done:true},
-        {text:'C 语言指针预习',done:false},
-        {text:'英语单词 30min',done:false}
-      ]
-    },
-    pomoLogs:[
-      {date:'2026-08-20',min:25,task:'Python 刷题'},
-      {date:'2026-08-20',min:25,task:'C 语言预习'},
-      {date:'2026-08-19',min:25,task:'高数'},
-      {date:'2026-08-18',min:50,task:'线代'}
-    ]
+    settings:{targetGpa:3.5,ownerName:'',major:''},
+    courses:[],
+    codingLogs:[],
+    skills:[],
+    projects:[],
+    timeline:[],
+    goals:[],
+    habits:[],
+    plans:{},
+    pomoLogs:[]
   };
 }
 
-/* ===== 大学四年规划（按当前日期自动定位学期） ===== */
+/* ===== 大学四年规划（按当前日期自动定位学期） =====
+   模板仅保留通用学期骨架，课程与学期重点由使用者自行填写
+   （原作者个人规划备份见 backup/planner-2026-08-21.json） */
 const planner={
-  startYear:2026,
+  startYear:new Date().getFullYear(),
   terms:[
-    {ay:2026,idx:0,key:'2026秋',phase:'大一上',focus:'编程双修（Python+C）+ 数学基础稳住，四六级报名、蓝桥杯练手',courses:[{name:'高等数学',credit:4},{name:'线性代数',credit:3},{name:'C语言程序设计',credit:3},{name:'大学英语',credit:3},{name:'Python程序设计(自学)',credit:2}]},
-    {ay:2026,idx:1,key:'2027春',phase:'大一下',focus:'Python 进阶 + C 深入，概率统计、离散数学跟上',courses:[{name:'概率统计',credit:3},{name:'离散数学',credit:3},{name:'医用物理',credit:3},{name:'Python进阶',credit:2},{name:'数据结构入门(自学)',credit:2}]},
-    {ay:2027,idx:0,key:'2027秋',phase:'大二上',focus:'数据结构与算法（核心课）、医学信息学、数据库入门',courses:[{name:'数据结构与算法',credit:4},{name:'医学信息学',credit:2},{name:'数据库原理',credit:3},{name:'计算机组成原理',credit:3},{name:'机器学习入门(自学)',credit:2}]},
-    {ay:2027,idx:1,key:'2028春',phase:'大二下',focus:'数据库/计算机网络（核心课）、医学统计学、AI 与机器学习',courses:[{name:'计算机网络',credit:3},{name:'医学统计学',credit:3},{name:'人工智能与机器学习',credit:3},{name:'Java程序设计',credit:3},{name:'深度学习(自学)',credit:2}]},
-    {ay:2028,idx:0,key:'2028秋',phase:'大三上',focus:'机器学习项目实战、医学影像处理（自学）、医疗 AI 竞赛/进组',courses:[{name:'机器学习实践',credit:3},{name:'医学影像处理(自学)',credit:2},{name:'NLP导论(自学)',credit:2},{name:'医院信息化',credit:2},{name:'软件工程',credit:3}]},
-    {ay:2028,idx:1,key:'2029春',phase:'大三下',focus:'医疗 AI 方向项目沉淀、夏令营/预研，确定保研 or 实习路线',courses:[{name:'医学数据挖掘',credit:2},{name:'毕业设计预研',credit:2},{name:'Python数据分析',credit:3},{name:'科研训练',credit:2}]},
-    {ay:2029,idx:0,key:'2029秋',phase:'大四上',focus:'实习（医院信息科 / 医疗AI公司）、秋招、毕设开题',courses:[{name:'专业实习',credit:6},{name:'毕业设计',credit:4}]},
-    {ay:2029,idx:1,key:'2030春',phase:'大四下',focus:'毕设冲刺、春招补录、论文答辩',courses:[{name:'毕业设计',credit:6},{name:'毕业论文',credit:4}]}
+    {ay:new Date().getFullYear(),idx:0,key:'大一上',phase:'大一上',focus:'',courses:[]},
+    {ay:new Date().getFullYear(),idx:1,key:'大一下',phase:'大一下',focus:'',courses:[]},
+    {ay:new Date().getFullYear()+1,idx:0,key:'大二上',phase:'大二上',focus:'',courses:[]},
+    {ay:new Date().getFullYear()+1,idx:1,key:'大二下',phase:'大二下',focus:'',courses:[]},
+    {ay:new Date().getFullYear()+2,idx:0,key:'大三上',phase:'大三上',focus:'',courses:[]},
+    {ay:new Date().getFullYear()+2,idx:1,key:'大三下',phase:'大三下',focus:'',courses:[]},
+    {ay:new Date().getFullYear()+3,idx:0,key:'大四上',phase:'大四上',focus:'',courses:[]},
+    {ay:new Date().getFullYear()+3,idx:1,key:'大四下',phase:'大四下',focus:'',courses:[]}
   ]
 };
 function termIndex(now){
@@ -627,8 +588,8 @@ function normalizeState(s){
   if(!s)return seed();
   if(!s.settings)s.settings={};
   if(!('targetGpa' in s.settings))s.settings.targetGpa=3.5;
-  if(!('ownerName' in s.settings))s.settings.ownerName='Angus';
-  if(!('major' in s.settings))s.settings.major='医学信息工程';
+  if(!('ownerName' in s.settings))s.settings.ownerName='';
+  if(!('major' in s.settings))s.settings.major='';
   if(!s.plans)s.plans={};
   if(!s.pomoLogs)s.pomoLogs=[];
   if(!s.health)s.health={water:{},exercises:[],meditations:[]};
@@ -942,7 +903,7 @@ function renderTermNotice(){
   const daysTxt=diff>0?`距开学 ${diff} 天`:diff===0?'今天开学':`已开学 ${-diff} 天`;
   const el=document.getElementById('term-notice');
   if(!el)return;
-  el.innerHTML=`当前学期：<b>${cur.phase}（${cur.key}）</b> · ${daysTxt} <button class="btn sm" onclick="importTermCourses('${cur.key}')">📥 导入本学期课程</button>`;
+  el.innerHTML=`当前学期：<b>${cur.key}</b> · ${daysTxt} <button class="btn sm" onclick="importTermCourses('${cur.key}')">📥 导入本学期课程</button>`;
 }
 function importTermCourses(key){
   const term=planner.terms.find(t=>t.key===key);
@@ -955,7 +916,7 @@ function importTermCourses(key){
     }
   });
   save();renderCourses();renderOverview();renderPlanner();
-  alert(added?`已导入 ${added} 门课程（重复已跳过，未出分的不会计入 GPA）`:'这些课程都已存在');
+  alert(added?`已导入 ${added} 门课程（重复已跳过，未出分的不会计入 GPA）`:(term.courses.length?'这些课程都已存在':'该学期还没有课程，先填规划吧'));
 }
 
 /* ===== 渲染：Coding ===== */
@@ -1294,9 +1255,9 @@ function renderPlanner(){
   const inHoliday=idx===2||idx===3;
   document.getElementById('pl-current').innerHTML=
     `<h3>📍 当前阶段</h3>
-     <div class="flex" style="margin-top:8px"><span class="tag" style="background:var(--green);color:#fff">${cur.phase}</span><span class="tag">${cur.key}</span>${inHoliday?'<span class="tag" style="background:var(--amber-soft);color:var(--amber)">假期中 · 下学期预告</span>':''}</div>
+     <div class="flex" style="margin-top:8px"><span class="tag" style="background:var(--green);color:#fff">${cur.phase}</span>${inHoliday?'<span class="tag" style="background:var(--amber-soft);color:var(--amber)">假期中 · 下学期预告</span>':''}</div>
      <div class="small muted" style="margin-top:8px">${daysTxt}</div>
-     <div class="pl-focus">🎯 ${cur.focus}</div>
+     <div class="pl-focus">🎯 ${cur.focus||'待填写学期重点'}</div>
      <div style="margin-top:10px">${cur.courses.map(c=>`<span class="tag">${c.name}${c.credit?' · '+c.credit+'学分':''}</span>`).join('')}</div>
      <div style="margin-top:14px"><button class="btn" onclick="importTermCourses('${cur.key}')">📥 把本学期课程导入课程列表</button></div>`;
   const groups={};
@@ -1307,8 +1268,8 @@ function renderPlanner(){
       <div class="pl-grid">${terms.map(t=>{
         const isCur=cur.key===t.key;
         return `<div class="pl-card${isCur?' cur':''}">
-          <div class="flex"><b>${t.phase} · ${t.key}</b>${isCur?'<span class="tag" style="background:var(--green);color:#fff">当前</span>':''}</div>
-          <div class="pl-focus small muted">${t.focus}</div>
+          <div class="flex"><b>${t.key}</b>${isCur?'<span class="tag" style="background:var(--green);color:#fff">当前</span>':''}</div>
+          <div class="pl-focus small muted">${t.focus||'（待填写）'}</div>
           <div style="margin-top:8px">${t.courses.map(c=>`<span class="tag">${c.name}</span>`).join('')}</div>
           <div style="margin-top:10px"><button class="btn sm ghost" onclick="importTermCourses('${t.key}')">导入课程</button></div>
         </div>`;
