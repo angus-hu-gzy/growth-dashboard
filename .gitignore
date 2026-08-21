@@ -1,0 +1,11 @@
+# 工作区记忆数据（本机专属，不入库）
+.workbuddy/
+
+# 日志与临时文件
+*.log
+*.tmp
+check.js
+
+# 系统文件
+.DS_Store
+Thumbs.db
