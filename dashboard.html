@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>成长仪表盘 · Angus</title>
+<title>成长仪表盘</title>
 <style>
 :root{
   --bg:#f5f7fa; --card:#ffffff; --ink:#1f2937; --muted:#6b7280;
@@ -186,7 +186,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 <div class="app">
   <aside class="sidebar">
     <div class="brand">🧭 成长仪表盘</div>
-    <div class="brand-sub">Angus · 医学信息工程</div>
+    <div class="brand-sub" id="brand-sub" onclick="editProfile()" style="cursor:pointer" title="点击修改">Angus · 医学信息工程</div>
     <div class="clock" id="clock"></div>
     <button class="btn sm ghost" id="themeBtn" style="width:100%;margin-bottom:14px">🌙 暗色模式</button>
     <button class="nav-btn active" data-sec="overview">📊 概览</button>
@@ -527,7 +527,7 @@ function todayStr(){return fmt(new Date());}
 
 function seed(){
   return {
-    settings:{targetGpa:3.5},
+    settings:{targetGpa:3.5,ownerName:'Angus',major:'医学信息工程'},
     courses:[
       {name:'高等数学',credit:4,score:85,term:'2026秋'},
       {name:'线性代数',credit:3,score:90,term:'2026秋'},
@@ -625,12 +625,28 @@ const contests=[
 
 function normalizeState(s){
   if(!s)return seed();
-  if(!s.settings)s.settings={targetGpa:3.5};
+  if(!s.settings)s.settings={};
+  if(!('targetGpa' in s.settings))s.settings.targetGpa=3.5;
+  if(!('ownerName' in s.settings))s.settings.ownerName='Angus';
+  if(!('major' in s.settings))s.settings.major='医学信息工程';
   if(!s.plans)s.plans={};
   if(!s.pomoLogs)s.pomoLogs=[];
   if(!s.health)s.health={water:{},exercises:[],meditations:[]};
   if(!s.reviews)s.reviews={};
   return s;
+}
+function updateBrand(){
+  const o=state.settings.ownerName||'';
+  const m=state.settings.major||'';
+  const el=document.getElementById('brand-sub');
+  if(el)el.textContent=(o||m)?(o+(m?' · '+m:'')):'点击此处填写个人信息';
+  document.title=o?`成长仪表盘 · ${o}`:'成长仪表盘';
+}
+function editProfile(){
+  const cur=state.settings;
+  const n=prompt('你的名字',cur.ownerName||'');if(n===null)return;
+  const m=prompt('专业 / 方向（可留空）',cur.major||'');if(m===null)return;
+  cur.ownerName=n.trim();cur.major=m.trim();save();updateBrand();
 }
 let state;
 try{state=normalizeState(JSON.parse(localStorage.getItem(DB_KEY))||seed());}catch(e){state=seed();}
@@ -1829,7 +1845,7 @@ function setReviewTab(tab){
 }
 
 /* ===== 启动 ===== */
-function renderAll(){renderTodayBar();renderOverview();renderCourses();renderCoding();renderProjects();renderGoals();renderPlan();renderPomo();renderPlanner();renderHealth();renderReview();}
+function renderAll(){updateBrand();renderTodayBar();renderOverview();renderCourses();renderCoding();renderProjects();renderGoals();renderPlan();renderPomo();renderPlanner();renderHealth();renderReview();}
 renderAll();
 autoSnapshot();
 renderBackupStatus();
