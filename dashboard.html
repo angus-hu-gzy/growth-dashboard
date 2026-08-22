@@ -400,6 +400,10 @@ th{color:var(--muted);font-weight:600;font-size:12px}
             <input id="pomo-task" list="pomo-task-list" placeholder="当前专注任务（可选，可自由输入）">
             <datalist id="pomo-task-list"></datalist>
           </div>
+          <div class="flex" style="justify-content:center;gap:8px;margin-bottom:10px">
+            <button class="btn sm" id="pomo-mode-up">⏫ 正向计时</button>
+            <button class="btn sm ghost" id="pomo-mode-down">⏬ 倒计时</button>
+          </div>
           <div class="pomo-mode-label" id="pomo-mode-label">🧘 专注中</div>
           <div class="flex" style="justify-content:center">
             <button class="btn" id="pomo-start">开始</button>
@@ -527,7 +531,7 @@ function todayStr(){return fmt(new Date());}
 
 function seed(){
   return {
-    settings:{targetGpa:3.5,ownerName:'',major:''},
+    settings:{targetGpa:3.5,ownerName:'',major:'',pomoMode:'up'},
     courses:[],
     codingLogs:[],
     skills:[],
@@ -590,6 +594,7 @@ function normalizeState(s){
   if(!('targetGpa' in s.settings))s.settings.targetGpa=3.5;
   if(!('ownerName' in s.settings))s.settings.ownerName='';
   if(!('major' in s.settings))s.settings.major='';
+  if(!('pomoMode' in s.settings))s.settings.pomoMode='up';
   if(!s.plans)s.plans={};
   if(!s.pomoLogs)s.pomoLogs=[];
   if(!s.health)s.health={water:{},exercises:[],meditations:[]};
@@ -1012,7 +1017,8 @@ function todayPlanStats(){
 
 /* ===== 渲染：番茄钟 ===== */
 const pomo={
-  elapsed:0,           // 已走秒数（正向计时）
+  mode:state.settings.pomoMode||'up',  // 'up' 正向计时 / 'down' 倒计时
+  elapsed:0,           // 已走秒数（从 0 向上走，两种模式共用）
   total:25*60,
   focusMin:25,
   bellRang:false,      // 到点提醒已响（只响一次，不自动停）
@@ -1045,14 +1051,19 @@ function pomoRingHTML(ratio,txt,color){
   return `<svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="${r}" style="stroke:var(--ring-track)" stroke-width="14" fill="none"/><circle cx="100" cy="100" r="${r}" style="stroke:${color}" stroke-width="14" fill="none" stroke-linecap="round" stroke-dasharray="${ratio*c} ${c}" transform="rotate(-90 100 100)"/><text x="100" y="112" text-anchor="middle" font-size="36" font-weight="700" style="fill:var(--ring-text)">${txt}</text></svg>`;
 }
 function renderPomo(){
-  const mm=String(Math.floor(pomo.elapsed/60)).padStart(2,'0');
-  const ss=String(pomo.elapsed%60).padStart(2,'0');
+  const showSec=pomo.mode==='down'?Math.max(0,pomo.total-pomo.elapsed):pomo.elapsed;
+  const mm=String(Math.floor(showSec/60)).padStart(2,'0');
+  const ss=String(showSec%60).padStart(2,'0');
   const ratio=pomo.total?Math.min(1,pomo.elapsed/pomo.total):0;
   const color='#2563eb';
   document.getElementById('pomo-ring').innerHTML=pomoRingHTML(ratio,mm+':'+ss,color);
   const label=document.getElementById('pomo-mode-label');
-  label.textContent='🧘 专注中'+(pomo.running?'':'（暂停）')+' · 目标 '+String(Math.floor(pomo.total/60)).padStart(2,'0')+':'+String(pomo.total%60).padStart(2,'0')+(pomo.bellRang?' · ⏰ 到点啦，点「完成」':'');
+  label.textContent=(pomo.mode==='down'?'⏳ 倒计时':'🧘 正向')+' 专注中'+(pomo.running?'':'（暂停）')+' · 目标 '+String(Math.floor(pomo.total/60)).padStart(2,'0')+':'+String(pomo.total%60).padStart(2,'0')+(pomo.bellRang?' · ⏰ 到点啦，点「完成」':'');
   label.className='pomo-mode-label';
+  const upBtn=document.getElementById('pomo-mode-up');
+  const downBtn=document.getElementById('pomo-mode-down');
+  if(upBtn)upBtn.className=pomo.mode==='up'?'btn sm':'btn sm ghost';
+  if(downBtn)downBtn.className=pomo.mode==='down'?'btn sm':'btn sm ghost';
   document.getElementById('pomo-start').textContent=pomo.running?'继续':'开始';
   const tp=(state.plans[todayStr()]||[]).filter(t=>!t.done);
   document.getElementById('pomo-task-list').innerHTML=tp.map(t=>`<option value="${t.text}">`).join('');
@@ -1205,7 +1216,8 @@ function pomoTick(){
     document.title='⏰ 专注到点 · 点「完成」收工 · 番茄钟';
   }
   renderPomo();
-  const t=String(Math.floor(pomo.elapsed/60)).padStart(2,'0')+':'+String(pomo.elapsed%60).padStart(2,'0');
+  const showSec=pomo.mode==='down'?Math.max(0,pomo.total-pomo.elapsed):pomo.elapsed;
+  const t=String(Math.floor(showSec/60)).padStart(2,'0')+':'+String(showSec%60).padStart(2,'0');
   document.title=(pomo.bellRang?'⏰ ':'')+t+' 专注中 · 番茄钟';
 }
 function pomoStart(){
@@ -1239,6 +1251,16 @@ function pomoComplete(){
 function pomoReset(){
   clearInterval(pomo.timer);pomo.timer=null;pomo.running=false;
   pomo.total=pomo.focusMin*60;
+  pomo.elapsed=0;pomo.bellRang=false;
+  document.title='🧭 成长仪表盘';
+  renderPomo();
+}
+function setPomoMode(m){
+  if(pomo.mode===m)return;
+  pomo.mode=m;
+  state.settings.pomoMode=m;
+  save();
+  clearInterval(pomo.timer);pomo.timer=null;pomo.running=false;
   pomo.elapsed=0;pomo.bellRang=false;
   document.title='🧭 成长仪表盘';
   renderPomo();
@@ -1657,6 +1679,8 @@ document.getElementById('pomo-start').onclick=pomoStart;
 document.getElementById('pomo-complete').onclick=pomoComplete;
 document.getElementById('pomo-pause').onclick=pomoPause;
 document.getElementById('pomo-reset').onclick=pomoReset;
+document.getElementById('pomo-mode-up').onclick=()=>setPomoMode('up');
+document.getElementById('pomo-mode-down').onclick=()=>setPomoMode('down');
 
 /* ===== 导航 + 重置 ===== */
 document.querySelectorAll('.nav-btn[data-sec]').forEach(b=>{
