@@ -404,7 +404,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
             <button class="btn sm" id="pomo-mode-up">⏫ 正向计时</button>
             <button class="btn sm ghost" id="pomo-mode-down">⏬ 倒计时</button>
           </div>
-          <div class="flex" style="justify-content:center;gap:8px;margin-bottom:10px">
+          <div class="flex" style="justify-content:center;gap:8px;margin-bottom:10px" id="pomo-min-row">
             <span class="small muted" style="align-self:center">目标时长</span>
             <input id="pomo-min" type="number" min="1" max="180" style="width:70px" value="25">
             <span class="small muted" style="align-self:center">分钟</span>
@@ -1065,12 +1065,15 @@ function renderPomo(){
   const color='#2563eb';
   document.getElementById('pomo-ring').innerHTML=pomoRingHTML(ratio,mm+':'+ss,color);
   const label=document.getElementById('pomo-mode-label');
-  label.textContent=(pomo.mode==='down'?'⏳ 倒计时':'🧘 正向')+' 专注中'+(pomo.running?'':'（暂停）')+' · 目标 '+String(Math.floor(pomo.total/60)).padStart(2,'0')+':'+String(pomo.total%60).padStart(2,'0')+(pomo.bellRang?' · ⏰ 到点啦，点「完成」':'');
+  const goalTxt=pomo.mode==='down'?(' · 目标 '+String(Math.floor(pomo.total/60)).padStart(2,'0')+':'+String(pomo.total%60).padStart(2,'0')):'';
+  label.textContent=(pomo.mode==='down'?'⏳ 倒计时':'🧘 正向')+' 专注中'+(pomo.running?'':'（暂停）')+goalTxt+(pomo.bellRang?' · ⏰ 到点啦，点「完成」':'');
   label.className='pomo-mode-label';
   const upBtn=document.getElementById('pomo-mode-up');
   const downBtn=document.getElementById('pomo-mode-down');
   if(upBtn)upBtn.className=pomo.mode==='up'?'btn sm':'btn sm ghost';
   if(downBtn)downBtn.className=pomo.mode==='down'?'btn sm':'btn sm ghost';
+  const minRow=document.getElementById('pomo-min-row');
+  if(minRow)minRow.style.display=pomo.mode==='down'?'':'none';
   const minEl=document.getElementById('pomo-min');
   if(minEl&&minEl!==document.activeElement)minEl.value=state.settings.pomoMinutes||25;
   document.getElementById('pomo-start').textContent=pomo.running?'继续':'开始';
@@ -1219,10 +1222,10 @@ function shiftTaskDay(n){
 }
 function pomoTick(){
   pomo.elapsed++;
-  if(pomo.elapsed>=pomo.total&&!pomo.bellRang){
+  if(pomo.mode==='down'&&pomo.elapsed>=pomo.total&&!pomo.bellRang){
     pomo.bellRang=true;
     beep();beep();
-    document.title='⏰ 专注到点 · 点「完成」收工 · 番茄钟';
+    document.title='⏰ 倒计时到点 · 点「完成」收工 · 番茄钟';
   }
   renderPomo();
   const showSec=pomo.mode==='down'?Math.max(0,pomo.total-pomo.elapsed):pomo.elapsed;
