@@ -454,6 +454,15 @@ th{color:var(--muted);font-weight:600;font-size:12px}
       <h2>大学规划总览</h2>
       <div class="section-desc">按当前日期自动定位所处学期，课程与阶段重点随之更新，可一键导入课程列表。</div>
       <div class="panel" id="pl-current"></div>
+      <div class="panel">
+        <h3>🗓 开学日期设置</h3>
+        <div class="form-row">
+          <div class="field"><label>秋季学期开学</label><input id="fall-open" type="date"></div>
+          <div class="field"><label>春季学期开学</label><input id="spring-open" type="date"></div>
+          <div class="field"><label>&nbsp;</label><button class="btn ghost" id="open-save">保存</button></div>
+        </div>
+        <div class="small muted">用于计算"距开学 N 天"（只取月/日，每年自动跟随学年）；学期划分仍按标准大学结构（秋季 9 月 / 春季 2 月）</div>
+      </div>
       <div id="pl-timeline"></div>
       <div class="panel">
         <h3>🏆 竞赛时间线（全部列出 · 参加与否自行决定）</h3>
@@ -466,6 +475,15 @@ th{color:var(--muted);font-weight:600;font-size:12px}
       <h2>健康</h2>
       <div class="section-desc">记录每日运动、冥想与饮水，趋势一图看清。</div>
       <div class="cards" id="health-cards"></div>
+      <div class="panel">
+        <h3>🎯 每日目标</h3>
+        <div class="form-row">
+          <div class="field"><label>饮水目标 (ml)</label><input id="water-goal" type="number" style="width:90px"></div>
+          <div class="field"><label>运动目标 (min)</label><input id="ex-goal" type="number" style="width:90px"></div>
+          <div class="field"><label>&nbsp;</label><button class="btn ghost" id="goal-save">保存</button></div>
+        </div>
+        <div class="small muted">影响顶部统计条与健康页的"达标 ✓"判断</div>
+      </div>
       <div class="grid2">
         <div class="panel"><h3>运动记录</h3>
           <div class="hr-form-row">
@@ -537,7 +555,7 @@ function todayStr(){return fmt(new Date());}
 
 function seed(){
   return {
-    settings:{targetGpa:3.5,ownerName:'',major:'',pomoMode:'up',pomoMinutes:25},
+    settings:{targetGpa:3.5,ownerName:'',major:'',pomoMode:'up',pomoMinutes:25,openDates:{fallM:9,fallD:1,springM:1,springD:15},waterGoal:1500,exGoal:30},
     courses:[],
     codingLogs:[],
     skills:[],
@@ -579,18 +597,24 @@ function currentPlannerTerm(){
   const next=idx===2?{ay:ay+1,idx:0}:{ay,idx:1};
   return planner.terms.find(t=>t.ay===next.ay&&t.idx===next.idx)||planner.terms[0];
 }
+function termStartDate(term){
+  const o=state.settings.openDates||{fallM:9,fallD:1,springM:1,springD:15};
+  const m=term.idx===0?o.fallM:o.springM;
+  const d=term.idx===0?o.fallD:o.springD;
+  return new Date(term.ay,m-1,d);
+}
 const contests=[
   {name:'蓝桥杯（程序设计）',level:'入门',times:'报名 10-12月',when:'省赛 4月 · 国赛 6月',years:[1,2,3],note:'C/C++/Python 均可，大一即可练手'},
   {name:'全国大学生英语竞赛 NECCS',level:'入门',times:'报名 12月-3月',when:'初赛 4月 · 决赛 5月',years:[1,2,3,4],note:'与四六级备考叠加，报名费低'},
   {name:'全国大学生数学竞赛 CMC',level:'入门',times:'报名 9-10月',when:'初赛 11月 · 决赛 次年3月',years:[1,2,3],note:'数学主场，大一就能报'},
   {name:'全国大学生数学建模 CUMCM',level:'进阶',times:'暑期组队报名',when:'国赛 9月中旬 · 美赛(MCM/ICM) 1月',years:[1,2,3],note:'团队赛，大二打最有性价比，需会 Python/Matlab'},
   {name:'全国大学生计算机设计大赛 4C',level:'进阶',times:'报名 3-4月',when:'省赛 5月 · 国赛 7-8月',years:[2,3],note:'作品赛，可把学习项目直接当作品'},
-  {name:'ACM-ICPC / CCPC（程序设计）',level:'硬核',times:'网络赛/省赛 9-10月',when:'区域赛 11月',years:[2,3],note:'算法功底要求高，医信方向不强制'},
+  {name:'ACM-ICPC / CCPC（程序设计）',level:'硬核',times:'网络赛/省赛 9-10月',when:'区域赛 11月',years:[2,3],note:'算法功底要求高，计算机相关方向可作进阶挑战'},
   {name:'挑战杯（课外学术科技作品）',level:'进阶',times:'校内选拔 11-12月',when:'省赛 3-5月 · 国赛 10-11月',years:[2,3],note:'奇数年主赛事，论文/作品皆可'},
-  {name:'互联网+（中国国际大学生创新大赛）',level:'进阶',times:'报名 4-8月',when:'校赛 6月 · 省赛 8月 · 国赛 10月',years:[2,3],note:'创业类赛道，可挂医疗AI项目'},
-  {name:'全国大学生生物医学工程创新设计竞赛',level:'方向',times:'报名 4-5月',when:'复赛 7-8月',years:[2,3],note:'最贴合医疗AI方向，强烈建议关注'},
+  {name:'互联网+（中国国际大学生创新大赛）',level:'进阶',times:'报名 4-8月',when:'校赛 6月 · 省赛 8月 · 国赛 10月',years:[2,3],note:'创业类赛道，可挂技术/科研类项目'},
+  {name:'全国大学生生物医学工程创新设计竞赛',level:'方向',times:'报名 4-5月',when:'复赛 7-8月',years:[2,3],note:'生物医学工程 / 医工交叉方向高度相关'},
   {name:'全国大学生信息安全竞赛',level:'进阶',times:'报名 3-4月',when:'初赛 5-6月 · 决赛 8月',years:[2,3],note:'安全方向，可选'},
-  {name:'天池 / Kaggle / 智源 AI 竞赛',level:'方向',times:'全年滚动报名',when:'线上赛，随时可打',years:[1,2,3,4],note:'简历利器，医疗AI赛道多，从入门赛开始'},
+  {name:'天池 / Kaggle / 智源 AI 竞赛',level:'方向',times:'全年滚动报名',when:'线上赛，随时可打',years:[1,2,3,4],note:'简历利器，AI 赛道多，从入门赛开始'},
   {name:'中国国际大学生服务外包创新创业大赛',level:'进阶',times:'报名 3月',when:'初赛 5-6月 · 决赛 8月',years:[3,4],note:'偏企业真实项目，可当实习跳板'}
 ];
 
@@ -602,6 +626,9 @@ function normalizeState(s){
   if(!('major' in s.settings))s.settings.major='';
   if(!('pomoMode' in s.settings))s.settings.pomoMode='up';
   if(!('pomoMinutes' in s.settings))s.settings.pomoMinutes=25;
+  if(!('openDates' in s.settings))s.settings.openDates={fallM:9,fallD:1,springM:1,springD:15};
+  if(!('waterGoal' in s.settings))s.settings.waterGoal=1500;
+  if(!('exGoal' in s.settings))s.settings.exGoal=30;
   if(!s.plans)s.plans={};
   if(!s.pomoLogs)s.pomoLogs=[];
   if(!s.health)s.health={water:{},exercises:[],meditations:[]};
@@ -910,7 +937,7 @@ function editCourse(i){
 function renderTermNotice(){
   const cur=currentPlannerTerm();
   const now=new Date();
-  const start=new Date(cur.ay,(cur.idx===0?8:1),cur.idx===0?1:15);
+  const start=termStartDate(cur);
   const diff=Math.round((start-now)/86400000);
   const daysTxt=diff>0?`距开学 ${diff} 天`:diff===0?'今天开学':`已开学 ${-diff} 天`;
   const el=document.getElementById('term-notice');
@@ -1298,13 +1325,28 @@ function applyPomoMinutes(){
   alert('目标时长已设为 '+v+' 分钟 ✓');
 }
 
+function saveOpenDates(){
+  const f=document.getElementById('fall-open').value;
+  const s=document.getElementById('spring-open').value;
+  if(!f||!s){alert('请选择两个开学日期');return;}
+  const fp=f.split('-'),sp=s.split('-');
+  state.settings.openDates={fallM:+fp[1],fallD:+fp[2],springM:+sp[1],springD:+sp[2]};
+  save();renderPlanner();renderOverview();
+  alert('开学日期已保存 ✓（距开学天数将按新日期计算）');
+}
 /* ===== 渲染：大学规划 ===== */
 function renderPlanner(){
   const cur=currentPlannerTerm();
   const now=new Date();
-  const start=new Date(cur.ay,(cur.idx===0?8:1),cur.idx===0?1:15);
+  const start=termStartDate(cur);
   const diff=Math.round((start-now)/86400000);
   const daysTxt=diff>0?`距开学 ${diff} 天`:diff===0?'今天开学':`已开学 ${-diff} 天`;
+  const od=state.settings.openDates||{fallM:9,fallD:1,springM:1,springD:15};
+  const fy=now.getFullYear();
+  const fEl=document.getElementById('fall-open');
+  if(fEl&&fEl!==document.activeElement)fEl.value=fy+'-'+String(od.fallM).padStart(2,'0')+'-'+String(od.fallD).padStart(2,'0');
+  const sEl=document.getElementById('spring-open');
+  if(sEl&&sEl!==document.activeElement)sEl.value=fy+'-'+String(od.springM).padStart(2,'0')+'-'+String(od.springD).padStart(2,'0');
   const {idx}=termIndex(now);
   const inHoliday=idx===2||idx===3;
   document.getElementById('pl-current').innerHTML=
@@ -1376,12 +1418,13 @@ function todayStats(){
   const tp=todayPlanStats();const ps=pomoStats();
   const water=state.health.water[todayStr()]||0;
   const exMin=state.health.exercises.filter(e=>e.date===todayStr()).reduce((a,e)=>a+e.min,0);
+  const wg=state.settings.waterGoal||1500,eg=state.settings.exGoal||30;
   return {
     planPct:tp.n?(Math.round(tp.done/tp.n*100)+'%'):'—',
     planSub:tp.n?`已完成 ${tp.done}/${tp.n}`:'今天没安排',
     pomoN:ps.todayN+' 个',pomoSub:`累计 ${ps.todayMin} 分钟`,
-    water:water+' ml',waterSub:water>=1500?'达标 ✓':'目标 1500 ml',
-    exMin:exMin+' min',exSub:'目标 30 min'
+    water:water+' ml',waterSub:water>=wg?'达标 ✓':'目标 '+wg+' ml',
+    exMin:exMin+' min',exSub:'目标 '+eg+' min'
   };
 }
 function renderTodayBar(){
@@ -1397,6 +1440,14 @@ function addWater(ml){
   state.health.water[k]=(state.health.water[k]||0)+ml;
   save();renderTodayBar();renderOverview();
 }
+function saveGoals(){
+  const w=parseInt(document.getElementById('water-goal').value)||0;
+  const e=parseInt(document.getElementById('ex-goal').value)||0;
+  if(w<1||w>9999||e<1||e>1440){alert('饮水目标 1-9999 ml，运动目标 1-1440 min');renderHealth();return;}
+  state.settings.waterGoal=w;state.settings.exGoal=e;
+  save();renderHealth();renderTodayBar();
+  alert('每日目标已保存 ✓');
+}
 
 /* ===== 渲染：健康 ===== */
 function renderHealth(){
@@ -1406,12 +1457,17 @@ function renderHealth(){
   const medToday=state.health.meditations.filter(m=>m.date===today);
   const medMin=medToday.reduce((a,m)=>a+m.min,0);
   const water=state.health.water[today]||0;
+  const wg=state.settings.waterGoal||1500,eg=state.settings.exGoal||30;
+  const wgEl=document.getElementById('water-goal');
+  if(wgEl&&wgEl!==document.activeElement)wgEl.value=wg;
+  const egEl=document.getElementById('ex-goal');
+  if(egEl&&egEl!==document.activeElement)egEl.value=eg;
   let totalWeek=0;const d=new Date();
   for(let i=0;i<7;i++){const ds=fmt(d);totalWeek+=state.health.exercises.filter(e=>e.date===ds).reduce((a,e)=>a+e.min,0);d.setDate(d.getDate()-1);}
   document.getElementById('health-cards').innerHTML=
     card('今日运动',exMin+' min','amber',`${exToday.length} 次`)+
     card('今日冥想',medMin+' min','green',`${medToday.length} 次`)+
-    card('今日饮水',water+' ml','blue',water>=1500?'达标 ✓':`差 ${1500-water} ml`)+
+    card('今日饮水',water+' ml','blue',water>=wg?'达标 ✓':`差 ${wg-water} ml`)+
     card('本周运动',totalWeek+' min');
   const exAll=[...state.health.exercises].sort((a,b)=>b.date.localeCompare(a.date)||b.t-a.t).slice(0,12);
   document.getElementById('ex-list').innerHTML=exAll.length
@@ -1714,6 +1770,8 @@ document.getElementById('pomo-reset').onclick=pomoReset;
 document.getElementById('pomo-mode-up').onclick=()=>setPomoMode('up');
 document.getElementById('pomo-mode-down').onclick=()=>setPomoMode('down');
 document.getElementById('pomo-min-apply').onclick=applyPomoMinutes;
+document.getElementById('open-save').onclick=saveOpenDates;
+document.getElementById('goal-save').onclick=saveGoals;
 
 /* ===== 导航 + 重置 ===== */
 document.querySelectorAll('.nav-btn[data-sec]').forEach(b=>{
