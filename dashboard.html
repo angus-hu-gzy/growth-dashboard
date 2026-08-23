@@ -1030,7 +1030,9 @@ const pomo={
   focusMin:state.settings.pomoMinutes||25,
   bellRang:false,      // 到点提醒已响（只响一次，不自动停）
   running:false,
-  timer:null
+  timer:null,
+  startTs:0,           // 本次运行段的开始时间戳（时间戳计时，不丢时间）
+  base:0               // 本次运行段开始前已累计的秒数
 };
 function beep(){
   try{
@@ -1057,17 +1059,20 @@ function pomoRingHTML(ratio,txt,color){
   const r=90,c=2*Math.PI*r;
   return `<svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="${r}" style="stroke:var(--ring-track)" stroke-width="14" fill="none"/><circle cx="100" cy="100" r="${r}" style="stroke:${color}" stroke-width="14" fill="none" stroke-linecap="round" stroke-dasharray="${ratio*c} ${c}" transform="rotate(-90 100 100)"/><text x="100" y="112" text-anchor="middle" font-size="36" font-weight="700" style="fill:var(--ring-text)">${txt}</text></svg>`;
 }
-function renderPomo(){
+function renderPomoClock(){
   const showSec=pomo.mode==='down'?Math.max(0,pomo.total-pomo.elapsed):pomo.elapsed;
   const mm=String(Math.floor(showSec/60)).padStart(2,'0');
   const ss=String(showSec%60).padStart(2,'0');
   const ratio=pomo.total?Math.min(1,pomo.elapsed/pomo.total):0;
-  const color='#2563eb';
-  document.getElementById('pomo-ring').innerHTML=pomoRingHTML(ratio,mm+':'+ss,color);
+  document.getElementById('pomo-ring').innerHTML=pomoRingHTML(ratio,mm+':'+ss,'#2563eb');
   const label=document.getElementById('pomo-mode-label');
   const goalTxt=pomo.mode==='down'?(' · 目标 '+String(Math.floor(pomo.total/60)).padStart(2,'0')+':'+String(pomo.total%60).padStart(2,'0')):'';
   label.textContent=(pomo.mode==='down'?'⏳ 倒计时':'🧘 正向')+' 专注中'+(pomo.running?'':'（暂停）')+goalTxt+(pomo.bellRang?' · ⏰ 到点啦，点「完成」':'');
   label.className='pomo-mode-label';
+  document.getElementById('pomo-start').textContent=pomo.running?'继续':'开始';
+}
+function renderPomo(){
+  renderPomoClock();
   const upBtn=document.getElementById('pomo-mode-up');
   const downBtn=document.getElementById('pomo-mode-down');
   if(upBtn)upBtn.className=pomo.mode==='up'?'btn sm':'btn sm ghost';
@@ -1076,7 +1081,6 @@ function renderPomo(){
   if(minRow)minRow.style.display=pomo.mode==='down'?'':'none';
   const minEl=document.getElementById('pomo-min');
   if(minEl&&minEl!==document.activeElement)minEl.value=state.settings.pomoMinutes||25;
-  document.getElementById('pomo-start').textContent=pomo.running?'继续':'开始';
   const tp=(state.plans[todayStr()]||[]).filter(t=>!t.done);
   document.getElementById('pomo-task-list').innerHTML=tp.map(t=>`<option value="${t.text}">`).join('');
   const s=pomoStats();
@@ -1221,13 +1225,13 @@ function shiftTaskDay(n){
   curTaskDate=fmt(d);renderPomo();
 }
 function pomoTick(){
-  pomo.elapsed++;
+  pomo.elapsed=Math.floor((Date.now()-pomo.startTs)/1000)+pomo.base;
   if(pomo.mode==='down'&&pomo.elapsed>=pomo.total&&!pomo.bellRang){
     pomo.bellRang=true;
     beep();beep();
     document.title='⏰ 倒计时到点 · 点「完成」收工 · 番茄钟';
   }
-  renderPomo();
+  renderPomoClock();
   const showSec=pomo.mode==='down'?Math.max(0,pomo.total-pomo.elapsed):pomo.elapsed;
   const t=String(Math.floor(showSec/60)).padStart(2,'0')+':'+String(showSec%60).padStart(2,'0');
   document.title=(pomo.bellRang?'⏰ ':'')+t+' 专注中 · 番茄钟';
@@ -1235,6 +1239,8 @@ function pomoTick(){
 function pomoStart(){
   if(!pomo.running){
     pomo.running=true;
+    pomo.base=pomo.elapsed;
+    pomo.startTs=Date.now();
     if(pomo.timer)clearInterval(pomo.timer);
     pomo.timer=setInterval(pomoTick,1000);
     beep();
@@ -1243,12 +1249,14 @@ function pomoStart(){
 }
 function pomoPause(){
   if(pomo.running){
+    pomo.elapsed=Math.floor((Date.now()-pomo.startTs)/1000)+pomo.base;
     clearInterval(pomo.timer);pomo.timer=null;pomo.running=false;
     document.title='⏸ 番茄钟已暂停';
     renderPomo();
   }
 }
 function pomoComplete(){
+  if(pomo.running){pomo.elapsed=Math.floor((Date.now()-pomo.startTs)/1000)+pomo.base;}
   if(pomo.elapsed<=0){alert('还没有计时，先点「开始」');return;}
   clearInterval(pomo.timer);pomo.timer=null;pomo.running=false;
   const task=document.getElementById('pomo-task').value.trim();
