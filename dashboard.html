@@ -125,6 +125,9 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 .pl-year{margin-bottom:22px}
 .pl-year-name{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:10px}
 .pl-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.pl-del{cursor:pointer;margin-left:5px;opacity:.55;font-size:11px;user-select:none}
+.pl-del:hover{opacity:1;color:var(--red)}
+.pl-input{padding:5px 8px;font-size:12px;min-width:0}
 @media(max-width:860px){.pl-grid{grid-template-columns:1fr}}
 .pl-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
 .pl-card.cur{border-color:var(--green);box-shadow:0 0 0 2px var(--green-soft)}
@@ -597,11 +600,14 @@ function termIndex(now){
   if(m===8)return {ay:y-1,idx:2};   // 暑假
   return {ay:y-1,idx:3};            // 寒假
 }
+function defaultPlannerTerms(){
+  return planner.terms.map(t=>({ay:t.ay,idx:t.idx,key:t.key,phase:t.phase,focus:t.focus||'',courses:(t.courses||[]).map(c=>({name:c.name,credit:c.credit}))}));
+}
 function currentPlannerTerm(){
   const {ay,idx}=termIndex(new Date());
-  if(idx<=1)return planner.terms.find(t=>t.ay===ay&&t.idx===idx)||planner.terms[0];
+  if(idx<=1)return state.plannerTerms.find(t=>t.ay===ay&&t.idx===idx)||state.plannerTerms[0];
   const next=idx===2?{ay:ay+1,idx:0}:{ay,idx:1};
-  return planner.terms.find(t=>t.ay===next.ay&&t.idx===next.idx)||planner.terms[0];
+  return state.plannerTerms.find(t=>t.ay===next.ay&&t.idx===next.idx)||state.plannerTerms[0];
 }
 function termStartDate(term){
   const o=state.settings.openDates||{fallM:9,fallD:1,springM:1,springD:15};
@@ -638,7 +644,8 @@ function normalizeState(s){
   if(!s.plans)s.plans={};
   if(!s.pomoLogs)s.pomoLogs=[];
   if(!s.health)s.health={water:{},exercises:[],meditations:[]};
-  if(!s.reviews)s.reviews={};
+  if(!('reviews' in s))s.reviews={};
+  if(!Array.isArray(s.plannerTerms)||!s.plannerTerms.length)s.plannerTerms=defaultPlannerTerms();
   return s;
 }
 function updateBrand(){
@@ -948,10 +955,14 @@ function renderTermNotice(){
   const daysTxt=diff>0?`距开学 ${diff} 天`:diff===0?'今天开学':`已开学 ${-diff} 天`;
   const el=document.getElementById('term-notice');
   if(!el)return;
-  el.innerHTML=`当前学期：<b>${cur.key}</b> · ${daysTxt} <button class="btn sm" onclick="importTermCourses('${cur.key}')">📥 导入本学期课程</button>`;
+  const has=cur.courses&&cur.courses.length;
+  el.innerHTML=`当前学期：<b>${cur.key}</b> · ${daysTxt} `+
+    (has
+      ? `<button class="btn sm" onclick="importTermCourses('${cur.key}')">📥 导入本学期课程（${cur.courses.length} 门）</button>`
+      : `<button class="btn sm ghost" onclick="document.querySelector('.nav-btn[data-sec=\\'planner\\']').click()">🗓 去规划页添加课程 →</button>`);
 }
 function importTermCourses(key){
-  const term=planner.terms.find(t=>t.key===key);
+  const term=state.plannerTerms.find(t=>t.key===key);
   if(!term)return;
   let added=0;
   term.courses.forEach(c=>{
@@ -961,7 +972,7 @@ function importTermCourses(key){
     }
   });
   save();renderCourses();renderOverview();renderPlanner();
-  alert(added?`已导入 ${added} 门课程（重复已跳过，未出分的不会计入 GPA）`:(term.courses.length?'这些课程都已存在':'该学期还没有课程，先填规划吧'));
+  alert(added?`已导入 ${added} 门课程（重复已跳过，未出分的不会计入 GPA）`:(term.courses.length?'这些课程都已存在':'该学期还没有课程，先在规划页对应学期卡片里「＋添加」吧'));
 }
 
 /* ===== 渲染：Coding ===== */
@@ -1322,29 +1333,64 @@ function renderPlanner(){
   if(sEl&&sEl!==document.activeElement)sEl.value=fy+'-'+String(od.springM).padStart(2,'0')+'-'+String(od.springD).padStart(2,'0');
   const {idx}=termIndex(now);
   const inHoliday=idx===2||idx===3;
+  const hasCur=cur.courses&&cur.courses.length;
   document.getElementById('pl-current').innerHTML=
     `<h3>📍 当前阶段</h3>
      <div class="flex" style="margin-top:8px"><span class="tag" style="background:var(--green);color:#fff">${cur.phase}</span>${inHoliday?'<span class="tag" style="background:var(--amber-soft);color:var(--amber)">假期中 · 下学期预告</span>':''}</div>
      <div class="small muted" style="margin-top:8px">${daysTxt}</div>
      <div class="pl-focus">🎯 ${cur.focus||'待填写学期重点'}</div>
      <div style="margin-top:10px">${cur.courses.map(c=>`<span class="tag">${c.name}${c.credit?' · '+c.credit+'学分':''}</span>`).join('')}</div>
-     <div style="margin-top:14px"><button class="btn" onclick="importTermCourses('${cur.key}')">📥 把本学期课程导入课程列表</button></div>`;
+     ${hasCur
+       ? `<div style="margin-top:14px"><button class="btn" onclick="importTermCourses('${cur.key}')">📥 把本学期课程导入课程列表</button></div>`
+       : `<div class="small muted" style="margin-top:12px">本学期的课程在下方对应学期卡片里「＋添加」</div>`}`;
   const groups={};
-  planner.terms.forEach(t=>{if(!groups[t.ay])groups[t.ay]=[];groups[t.ay].push(t);});
+  state.plannerTerms.forEach(t=>{if(!groups[t.ay])groups[t.ay]=[];groups[t.ay].push(t);});
   document.getElementById('pl-timeline').innerHTML=Object.entries(groups).map(([ay,terms])=>{
     const yearN=+ay-planner.startYear+1;
     return `<div class="pl-year"><div class="pl-year-name">🎓 大学第 ${yearN} 年</div>
       <div class="pl-grid">${terms.map(t=>{
         const isCur=cur.key===t.key;
         return `<div class="pl-card${isCur?' cur':''}">
-          <div class="flex"><b>${t.key}</b>${isCur?'<span class="tag" style="background:var(--green);color:#fff">当前</span>':''}</div>
-          <div class="pl-focus small muted">${t.focus||'（待填写）'}</div>
-          <div style="margin-top:8px">${t.courses.map(c=>`<span class="tag">${c.name}</span>`).join('')}</div>
-          <div style="margin-top:10px"><button class="btn sm ghost" onclick="importTermCourses('${t.key}')">导入课程</button></div>
+          <div class="flex"><b>${t.key}</b>${isCur?'<span class="tag" style="background:var(--green);color:#fff">当前</span>':''}<span class="spacer"></span>
+            <button class="btn sm ghost" onclick="importTermCourses('${t.key}')">导入</button></div>
+          <div class="pl-focus small muted" style="cursor:pointer" title="点击编辑学期重点" onclick="editTermFocus('${t.key}')">🎯 ${t.focus||'（点击填写学期重点）'}</div>
+          <div style="margin-top:8px">${t.courses.map((c,ci)=>`<span class="tag">${c.name}${c.credit?'·'+c.credit+'学分':''}<span class="pl-del" title="删除该课程" onclick="delTermCourse('${t.key}',${ci})">✕</span></span>`).join('')||'<span class="muted small">还没有课程，下方添加</span>'}</div>
+          <div class="flex" style="margin-top:8px;gap:6px">
+            <input class="pl-input" id="plc-name-${t.key}" placeholder="课程名">
+            <input class="pl-input" id="plc-credit-${t.key}" type="number" min="0" step="0.5" placeholder="学分" style="width:56px">
+            <button class="btn sm ghost" onclick="addTermCourse('${t.key}')">＋</button>
+          </div>
         </div>`;
       }).join('')}</div></div>`;
   }).join('');
   renderContests();
+}
+function addTermCourse(key){
+  const term=state.plannerTerms.find(t=>t.key===key);
+  if(!term)return;
+  const nameEl=document.getElementById('plc-name-'+key);
+  const creditEl=document.getElementById('plc-credit-'+key);
+  const name=(nameEl?nameEl.value:'').trim();
+  if(!name){alert('请填课程名');return;}
+  if(term.courses.some(c=>c.name===name)){alert('「'+name+'」已在'+key+'中');return;}
+  const credit=parseFloat(creditEl?creditEl.value:0)||0;
+  term.courses.push({name,credit});
+  save();renderPlanner();
+}
+function delTermCourse(key,idx){
+  const term=state.plannerTerms.find(t=>t.key===key);
+  if(!term||!term.courses[idx])return;
+  if(!confirm('从规划中删除「'+term.courses[idx].name+'」？不影响课程列表里已导入的记录'))return;
+  term.courses.splice(idx,1);
+  save();renderPlanner();
+}
+function editTermFocus(key){
+  const term=state.plannerTerms.find(t=>t.key===key);
+  if(!term)return;
+  const v=prompt('编辑学期重点（可留空）',term.focus||'');
+  if(v===null)return;
+  term.focus=v.trim();
+  save();renderPlanner();
 }
 function renderContests(){
   const el=document.getElementById('contest-list');
