@@ -65,6 +65,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--primary)
 .status-chip.doing{background:var(--primary);color:#fff}
 .status-chip.done{background:var(--green);color:#fff}
 .status-chip.dropped{background:var(--red);color:#fff}
+.status-sel{padding:1px 6px;font-size:12px;border-radius:6px;border:1px solid var(--primary);background:var(--card);color:var(--ink);font-family:inherit;cursor:pointer}
+.tags-edit{cursor:pointer;display:inline-block}
+.tags-edit:hover .tag{outline:1px dashed var(--primary);outline-offset:2px}
+.tag.ghost{background:transparent;color:var(--muted);border:1px dashed var(--line)}
 .btn.green{background:var(--green)}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
@@ -1072,7 +1076,7 @@ function renderProjects(){
     card('规划中',cnt('规划中'))+
     card('平均进度',avg+'%','amber');
   document.getElementById('p-list').innerHTML=state.projects.length
-    ? state.projects.map((p,i)=>`<div class="row"><div style="flex:1"><b>${p.name}</b> ${p.tags.map(t=>`<span class="tag">${t}</span>`).join('')}<div class="muted small">${p.desc||''} · <span class="status-chip ${p.status==='进行中'?'doing':(p.status==='已完成'?'done':(p.status==='已搁置'?'dropped':''))}" onclick="cycleStatus(${i})" title="点击切换状态">${p.status}</span></div><div class="progress" style="margin-top:6px"><i style="width:${p.prog}%"></i></div></div><div class="flex" style="align-items:center;gap:6px"><button class="btn sm step-btn" onclick="setProg(${i},-10)" title="进度 -10%">−</button><span class="small prog-num" onclick="setProgInput(${i})" title="点击直接输入进度">${p.prog}%</span><button class="btn sm step-btn" onclick="setProg(${i},10)" title="进度 +10%">+</button><button class="btn sm danger" onclick="delProject(${i})">删</button></div></div>`).join('')
+    ? state.projects.map((p,i)=>`<div class="row"><div style="flex:1"><b>${p.name}</b> <span class="tags-edit" onclick="editTags(${i})" title="点击编辑标签">${p.tags.length?p.tags.map(t=>`<span class="tag">${t}</span>`).join(''):'<span class="tag ghost">+标签</span>'}</span><div class="muted small">${p.desc||''} · <span class="status-chip ${p.status==='进行中'?'doing':(p.status==='已完成'?'done':(p.status==='已搁置'?'dropped':''))}" onclick="editStatus(${i},event)" title="点击修改状态">${p.status}▾</span></div><div class="progress" style="margin-top:6px"><i style="width:${p.prog}%"></i></div></div><div class="flex" style="align-items:center;gap:6px"><button class="btn sm step-btn" onclick="setProg(${i},-10)" title="进度 -10%">−</button><span class="small prog-num" onclick="setProgInput(${i})" title="点击直接输入进度">${p.prog}%</span><button class="btn sm step-btn" onclick="setProg(${i},10)" title="进度 +10%">+</button><button class="btn sm danger" onclick="delProject(${i})">删</button></div></div>`).join('')
     : '<div class="empty">还没有项目。</div>';
   const tl=[...state.timeline].sort((a,b)=>(a.start||'').localeCompare(b.start||''));
   document.getElementById('t-list').innerHTML=tl.length
@@ -1094,11 +1098,32 @@ function setProgInput(i){
   p.prog=Math.max(0,Math.min(100,parseInt(v)||0));
   save();renderProjects();renderOverview();
 }
-/* 点击状态标签循环切换 */
-function cycleStatus(i){
+/* 点击状态标签 → 行内下拉直接选择 */
+function editStatus(i,ev){
   const p=state.projects[i];if(!p)return;
-  const order=['规划中','进行中','已完成','已搁置'];
-  p.status=order[(order.indexOf(p.status)+1)%order.length];
+  const chip=ev.currentTarget;
+  const sel=document.createElement('select');
+  sel.className='status-sel';
+  ['规划中','进行中','已完成','已搁置'].forEach(s=>{
+    const o=document.createElement('option');
+    o.textContent=s;o.selected=(s===p.status);
+    sel.appendChild(o);
+  });
+  chip.replaceWith(sel);
+  sel.focus();
+  sel.addEventListener('change',()=>{
+    p.status=sel.value;save();renderProjects();renderOverview();
+  });
+  sel.addEventListener('blur',()=>{
+    if(sel.parentNode)renderProjects(); /* 未选择直接失焦 → 恢复原状 */
+  });
+}
+/* 点击标签 → 编辑（逗号分隔） */
+function editTags(i){
+  const p=state.projects[i];if(!p)return;
+  const v=prompt('编辑标签（多个用英文或中文逗号分隔）：',p.tags.join(','));
+  if(v===null)return;
+  p.tags=v.split(/[,，]/).map(s=>s.trim()).filter(Boolean);
   save();renderProjects();renderOverview();
 }
 
