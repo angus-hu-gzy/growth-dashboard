@@ -192,6 +192,10 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 .hist-row .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .backup-box{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
 .backup-box .btn{display:block;width:100%;margin-bottom:6px}
+.backup-head{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;gap:6px;padding:2px 0;border-radius:8px}
+.backup-head:hover{background:var(--primary-soft)}
+.backup-arrow{transition:transform .2s;font-size:11px;color:var(--muted)}
+.backup-box.open .backup-arrow{transform:rotate(180deg)}
   .review-submitted{background:var(--green-soft);color:var(--green);padding:3px 10px;border-radius:12px;font-size:11px}
   .hm-wrap{display:flex;gap:3px;overflow-x:auto;padding-bottom:6px}
   .hm-col{display:flex;flex-direction:column;gap:3px}
@@ -199,7 +203,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
   .hm-month{font-size:10px;color:var(--muted);margin-bottom:4px;white-space:nowrap}
   .hm-legend{display:inline-flex;gap:2px;vertical-align:middle}
   .hm-legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
-  @media(max-width:720px){.sidebar{width:100%;height:auto;position:relative}.app{flex-direction:column}.main{padding:18px}}
+  @media(max-width:720px){.sidebar{width:100%;height:auto;position:relative}.app{flex-direction:column}.main{padding:18px}.backup-body{display:none}.backup-box.open .backup-body{display:block}}
 
 /* ============================================================
    UI 优化层 · 像素君设计系统
@@ -277,14 +281,19 @@ input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0
     <button class="nav-btn" data-sec="planner">🗺 大学规划</button>
     <button class="nav-btn" data-sec="health">🏃 健康</button>
     <button class="nav-btn" data-sec="review">📝 每日复盘</button>
-    <div class="backup-box">
-      <div class="small muted" style="margin-bottom:6px">💾 数据备份</div>
-      <button class="btn sm ghost" id="btn-export">⬇ 导出 JSON</button>
-      <button class="btn sm ghost" id="btn-import">⬆ 导入 JSON</button>
-      <button class="btn sm ghost" id="btn-restore">🔄 恢复最近备份</button>
-      <input type="file" id="import-file" accept=".json,application/json" style="display:none">
-      <button class="btn sm ghost" id="btn-auto-backup" style="margin-top:6px">📁 启用自动备份</button>
-      <div class="small muted" id="backup-status" style="margin-top:6px">数据存本机浏览器，导出一份防丢</div>
+    <div class="backup-box" id="backupBox">
+      <div class="backup-head" id="backupHead" title="点击展开 / 收起">
+        <div class="small" style="font-weight:600">💾 数据备份</div>
+        <span class="backup-arrow">▾</span>
+      </div>
+      <div class="backup-body">
+        <button class="btn sm ghost" id="btn-export">⬇ 导出 JSON</button>
+        <button class="btn sm ghost" id="btn-import">⬆ 导入 JSON</button>
+        <button class="btn sm ghost" id="btn-restore">🔄 恢复最近备份</button>
+        <input type="file" id="import-file" accept=".json,application/json" style="display:none">
+        <button class="btn sm ghost" id="btn-auto-backup" style="margin-top:6px">📁 启用自动备份</button>
+        <div class="small muted" id="backup-status" style="margin-top:6px">数据存本机浏览器，导出一份防丢</div>
+      </div>
     </div>
     <button class="nav-btn" id="resetBtn" style="margin-top:18px;color:var(--red)">🗑 清空重置</button>
   </aside>
@@ -2027,6 +2036,7 @@ document.getElementById('import-file').onchange=e=>{
   e.target.value='';
 };
 document.getElementById('btn-restore').onclick=restoreSnapshot;
+document.getElementById('backupHead').onclick=function(){document.getElementById('backupBox').classList.toggle('open');};
 /* ===== 主题切换（亮 / 暗） ===== */
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme',t);
