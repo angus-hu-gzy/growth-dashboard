@@ -743,7 +743,25 @@ let state;
 try{state=normalizeState(JSON.parse(localStorage.getItem(DB_KEY))||seed());}catch(e){state=seed();}
 let curPlanDate=todayStr();
 let curTaskDate=todayStr();
-function save(){localStorage.setItem(DB_KEY,JSON.stringify(state));scheduleAutoBackup();}
+/* 存储失败提示（本次会话只弹一次，避免每点一下就弹） */
+let _saveFailAlerted=false;
+function saveFailNotify(err){
+  const quota=(err&&(err.name==='QuotaExceededError'||err.name==='NS_ERROR_DOM_QUOTA_REACHED'||err.code===22||err.code===1014));
+  const why=quota?'浏览器存储空间已满':'浏览器禁止本地存储';
+  const msg='⚠️ 数据没存上（'+why+'）。\n改动能继续用，但刷新或关掉页面会丢失！\n请立刻点「💾 导出 JSON / 备份」把数据备份出来。';
+  if(_saveFailAlerted)return;   // 同一会话内重复失败不再反复弹窗
+  _saveFailAlerted=true;
+  alert(msg);
+}
+function save(){
+  try{
+    localStorage.setItem(DB_KEY,JSON.stringify(state));
+  }catch(err){
+    saveFailNotify(err);
+    return;   // 没存上就不触发自动备份调度，内存里的 state 保持可用
+  }
+  scheduleAutoBackup();
+}
 
 /* ===== 通用计算 ===== */
 function scoreToGpa(s){
@@ -1198,9 +1216,21 @@ const pomo={
   startTs:0,           // 本次运行段的开始时间戳（时间戳计时，不丢时间）
   base:0               // 本次运行段开始前已累计的秒数
 };
+/* 共享 AudioContext：只在第一次 beep() 时懒创建，全页复用同一个实例（反复 new 会耗尽浏览器约 6 个的上限） */
+let _audioCtx=null;
+function getAudioCtx(){
+  if(!_audioCtx){
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)return null;
+    _audioCtx=new AC();
+  }
+  return _audioCtx;
+}
 function beep(){
   try{
-    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const ctx=getAudioCtx();
+    if(!ctx)return;
+    if(ctx.state==='suspended')ctx.resume().catch(()=>{});
     const o=ctx.createOscillator();const g=ctx.createGain();
     o.connect(g);g.connect(ctx.destination);
     o.frequency.value=880;o.type='sine';
@@ -1664,11 +1694,25 @@ function ensureReviewDraft(){
   }
 }
 function syncDraftFromForm(){
-  reviewDraft.q1=document.getElementById('r-q1').value;
-  reviewDraft.q2=document.getElementById('r-q2').value;
-  reviewDraft.q3=document.getElementById('r-q3').value;
-  reviewDraft.note=document.getElementById('r-note').value;
+  const g=id=>{const el=document.getElementById(id);return el?el.value:'';};
+  reviewDraft.q1=g('r-q1');
+  reviewDraft.q2=g('r-q2');
+  reviewDraft.q3=g('r-q3');
+  reviewDraft.note=g('r-note');
 }
+/* 输入即时回写 reviewDraft：这样 setMood() / 切页面触发的 renderReview() 不会把刚打的字冲掉（只存内存，不落盘） */
+[['r-q1','q1'],['r-q2','q2'],['r-q3','q3'],['r-note','note']].forEach(([id,key])=>{
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.addEventListener('input',()=>{
+    ensureReviewDraft();
+    reviewDraft[key]=el.value;
+    if(key==='note'){
+      const pv=document.getElementById('r-preview');
+      if(pv)pv.innerHTML=renderMarkdown(el.value);
+    }
+  });
+});
 function renderReview(){
   const today=todayStr();
   ensureReviewDraft();
@@ -1714,6 +1758,7 @@ function renderReview(){
 }
 function setMood(k,v){
   ensureReviewDraft();
+  syncDraftFromForm();   // 先把手打的字收进草稿，再重渲染，避免丢字
   reviewDraft.mood[k]=v;renderReview();
 }
 function saveReview(submitted){
@@ -1983,6 +2028,7 @@ function renderBackupStatus(){
   }
 }
 const SNAP_KEY=DB_KEY+'_snapshots';
+const SNAP_MAX=7;   // 自动快照最多保留 7 份全量 state（占 localStorage 配额，别太多）
 function exportData(){
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
   const a=document.createElement('a');
@@ -2013,7 +2059,7 @@ function autoSnapshot(){
     if(snaps[t])return;
     snaps[t]=JSON.parse(JSON.stringify(state));
     const keys=Object.keys(snaps).sort();
-    while(keys.length>14)delete snaps[keys.shift()];
+    while(keys.length>SNAP_MAX)delete snaps[keys.shift()];
     localStorage.setItem(SNAP_KEY,JSON.stringify(snaps));
   }catch(e){}
 }
@@ -2021,7 +2067,7 @@ function restoreSnapshot(){
   let snaps={};
   try{snaps=JSON.parse(localStorage.getItem(SNAP_KEY))||{};}catch(e){}
   const keys=Object.keys(snaps).sort();
-  if(!keys.length){alert('还没有自动备份（每天打开会自动存一份，最多14份）');return;}
+  if(!keys.length){alert('还没有自动备份（每天打开会自动存一份，最多'+SNAP_MAX+'份）');return;}
   const pick=keys[keys.length-1];
   if(!confirm('恢复 '+pick+' 的自动备份？将覆盖当前数据。'))return;
   state=normalizeState(JSON.parse(JSON.stringify(snaps[pick])));
